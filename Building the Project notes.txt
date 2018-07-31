@@ -1,0 +1,104 @@
+This app was inspired by Facebook's hobby features. Facebook used to let you rate & review books you had read. They unfortunately took that feature away. Facebook's pages were also horribly un-mobile friendly.
+This app lets you save reviews of books and movies, last episodes of TV shows you watch, & games you have played.
+Reviews can be written for any category. And you can keep them private or publish them for the world to see. You can also see other people's published reviews.
+This app is mobile friendly.
+API for video games: https://www.igdb.com/api
+Google Books API: https://developers.google.com/books/
+Movie & TV API: there are a few.. I will go with https://www.themoviedb.org/documentation/api
+
+Create project:
+npm install -g @vue/cli-init
+to globally install vue cli so that you can use vue command in npm shell
+Choose an official Vue project template as a development tool using https://vuetifyjs.com/en/getting-started/quick-start
+We chose webpack (webpack-advanced)
+copy the markup given to you by the Vuetify website:
+vue init vuetifyjs/webpack project-name
+Runtime + compiler is for multi-page applications that will only use Vue on certain pages.
+Compiler only option is only for SPAs. We chose runtime only.
+We chose the standard ESLint present. If you use standard, you are not allowed to use semi-colons at the end of your rows.
+We chose no to the unit test options & yes to vue-router
+
+Adding Content:
+First we start with the BookKeeper page. We create BookKeeper.vue in the components folder. We change the root route in router/index.js
+to go to the BookKeeper page for now.
+Make sure to import components at the top of router/index.js when adding more pages. To add links to the navbar, use :to & add
+route to navbar object in script at bottom of page.
+
+App.vue
+Navbar
+I added Sign In & Sign Up options to navbar in App.vue.
+
+Dynamic search bar:
+I learned how to create a dynamic search bar using this video: https://www.youtube.com/watch?v=G34_yNV8FMY
+
+Build the Store
+We need to use Vuex to create a store so that we can store our data.
+npm install vuex --save
+After I created the store file, import it in the main.js file.
+
+Connect to Firebase
+In order to use things such as user login in our apps, we have to import Firebase. Install it with
+npm install firebase
+Then import it in main.js. You will also need to copy the initializeApp config from your project's firebase website.
+
+SignUp
+I copied all of the sign up code from the SignUp.vue file in the VueJs Vuetify Meetup project. Then I copied all of the code I would need from that project's store file. Our SignUp component requires a shared Alert component. So I created a Shared subfolder and copied the alert.vue code over from the Meetup project.
+The navbar then needs to be changed so that only certain options are displayed if the user is or not authenticated.
+
+Left Nav
+I updated the left nav so that each tile would have subtiles using Vuetify's expansion list example. (https://vuetifyjs.com/en/components/lists#example-expansion-lists) I also separated out the "Get Inspired" icon since it would not have a submenu & is just the homepage link.
+
+Books I have Read
+I copied the template code from the Books I want to read vue file. Then I added this new Vue file to the router/index.js file.
+
+Compartmentalizing the Store
+The store can be separated into objects that are for a certain part of the site. We separated the store into books, user and shared. For anything that would be used for both the user and books, we can put in the share folder. This includes loading and error. After creating the separated files, we export them. They are just objects, so the only thing that needs to be imported in the files is firebase for the files that call Firebase. In our main store, we import the objects in as part of our modules.
+
+Adding Books to Books I Want to Read
+I added an event handler in our datalist section to @change and put it inside the input element, because you cannot bind an event to option. "once you click a option, the change event callback of select will be invoked:" (https://stackoverflow.com/questions/46260052/using-click-in-select-options-vue-js-2#) The same applies to the datalist setup. I then created a method that saves the input value from the option datalist setup. I add this information to a newly created object and then dispatch it to the book portion of the store: actions. Basing my code off of some actions in the previous project's code, I only add data to my object if it exists. That way, no undefined data is passed in. I push it to a new "bookstoread" section of my database & save the key that firebase gives us as our book's id. We commit this data to our setBookstoRead mutation, which pushes the data to our store's bookstoRead object.
+
+Loading Books to Books I Want to Read
+We are now able to add books to the page, but if we refresh the page, we will no longer see the books we just added, even though they are in the database. To make sure books are loaded when we add the page, we need to add our loadBooks store method to our main.js file within the created method in our new Vue instance.
+
+Save the Books the User Wants to Read Correctly in the Database
+After we did this, we will see the books we just added if we refresh the page and if we log in and out. However, if we log out now and go to the "Books I Want to Read" page, we will still see the list of books! loadBooks should not be used to pull the user's data (which books the user has read) (& it would only need to be dispatched in the main.js file if the user has been authenticated.) Instead of calling loadbooks, we need to fix fetchUserData so that it pulls from a user node in the database named the user's id. After doing this, I then created the action assignUserBooktoRead in the user's store. This method is similar to the registerbooks action & I copied the validation code from my addBook method I am no longer using. In order for the bookstoread getter to work (called from the BooksIWantToRead component to get the list of books), I had to move it to the user store where there was a user state object. Now my list of books no longer shows when I log out & is still there if I refresh the page.
+
+Finishing Up Our Added Books to Read
+The added books still do not contain the author and image. I did not want to take up space in the database with all of the images, so I just decided to import in the URL.
+
+Making the Mark as Read Button Work
+I passed in the current book to my onReadBook method. Then I wanted to use the book's id to identify the book. From this, I noticed no book id was actually being passed in to the component (to then be binded to the book's key.) Just by adding an id to the updateObj in the assignUserBooktoRead action, this updated the information in the object that is pushed to the bookstoread store array. However, the assignUserBooktoRead mutation still needed to be updated so that the same book was not added to the bookstoread more than once. This needed the Google Books API book id for the findIndex function.
+I did not want to even add the book to our Firebase if it was already in our bookstoRead state array, so I moved the findIndex function to our action (instead of the mutation.) I used console.log JSON.stringify state to figure out where everything was saved in the JSON store object in order to traverse our books. I also needed to use this within the action.
+Next, I needed to figure out where our Firebase key was being saved. This was going to be the only thing I was going to pass in when I called onReadBook, because this is the key with all of the book data being its value. In order to do this, I would need to change my data structure from an array to a dictionary. In JavaScript, JSON is a dictionary. We can still use Vue to iterate through an object. This requires us to clean up our code in our fetchUserData action & to rewrite our findIndex method in our assignUserBooktoRead action.
+Now, I was running into issues when trying to access my user module's state from my book module. We pass in the context object to our actions. Using destructuring, we can only take out the properties we need. (Properties in the context object: https://vuex.vuejs.org/api/#actions)
+While we can access the states from other modules using actions, we can't using mutations. So if you want to access that module's state using a mutation, you will have to put that mutation in there.
+
+Remove the Book From Our Want to Read List Once Read
+We also want to remove the book from our want to read list & refresh the page once we have read the book. To do this, we will "call remove() on a reference to the location of that data." (https://firebase.google.com/docs/database/web/read-and-write#delete_data)
+
+Reorganizing Read and Want to Read Books Functions so that We Avoid Boilerplate Code
+By passing in the name of the subdirectory of the database we which to access (& also the name of our stored array), we can use the same action for these two components. In order to dynamically access the Object property matching the name of our passed in variable, I had to loop through each of the names of our object's keys using the Object.keys method. Using what I learned from the 'The Long Road to Async/Await in JavaScript' talk at SFNode 2018 (https://www.youtube.com/watch?v=IZIcWl-jq_0&t=1687s) I used Promise.all to make sure to make sure our async Firebase operations are done in parallel. Using the Vuex docs as a template: https://vuex.vuejs.org/guide/actions.html
+Next, we need to edit the assignUserBookToRead mutation so that it either allows us to update the state given a passedin book array or create a new mutation. Which begs the question, is it better programming design to create a mutation for each state property, or to avoid boilerplate code? I decided to avoid boilerplate code.
+
+Only Allow Users to Add Books if Authenticated
+We only want to let users visiting this page to be able to add books to the lists if they are logged in. We still want them to access the page, because eventually each user will have his/her own subdirectory with their own "books" etc in it. I copied the userIsAuthenticated computed method from the App.vue file and added
+
+Upload First Version to Github
+Create a new repository on GitHub & copy URL.
+Using Git GUI, create new repository & select the project's folder.
+In Git CMD, run
+git config --global user.email "youremail"
+git config --global user.name "yourname"
+Type in initial commit message.
+Select Stage Changed
+A warning message about line endings may pop up: https://stackoverflow.com/questions/1967370/git-replacing-lf-with-crlf
+Select Commit
+Add remote.
+Push to remote.
+
+Allow Users to Comment or Review on Read Books
+I decided to have the comment dialog be the v-dialog component that will open up to take up the whole screen opposed to incorporating an expansion panel. The expansion panel opened up would make the card look differently and the buttons would have to be rearranged.
+I added Vuex module code so that the comments would be saved in the database. The update function allows us to update only certain keys on an object. Whenever using push, Firebase will create a new key. Once a comment has been saved, it will remain in the dialog box if you close and reopen it. The comment property/module must be bound to the comment in the store in order for it to show in the comment box even if you refresh the page. This is done by importing it in from the parent component.
+
+Allowing Users to Remove Books from Their Lists
+I used Vuetify's floating action button and had it positioned on the top right of the card. Then I tied it to a remove book action in the Vuex store. Now that I had a remove book action, I refactored the readBook action in the store so that it would call the new remove book action so as to avoid boilerplate code.
