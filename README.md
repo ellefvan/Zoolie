@@ -1,3 +1,4 @@
+** This project was created before I began school at NC State, so it does not include proper JavaDoc and does not follow other style guidelines. **
 # zoolie
 
 > A new social media app where you can share everything you enjoy doing in your free time with others.
